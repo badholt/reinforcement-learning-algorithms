@@ -6,11 +6,8 @@ import edu.jhu.Barbara.cs335.hw5.data.Terrain;
 import edu.jhu.Barbara.cs335.hw5.data.WorldMap;
 import edu.jhu.Barbara.cs335.hw5.util.DefaultValueHashMap;
 import edu.jhu.Barbara.cs335.hw5.util.Pair;
-
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 public class ValueIteratingAgent implements ReinforcementLearningAgent
 {

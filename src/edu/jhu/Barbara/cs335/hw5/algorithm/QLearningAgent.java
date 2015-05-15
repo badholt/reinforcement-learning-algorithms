@@ -1,21 +1,15 @@
 package edu.jhu.Barbara.cs335.hw5.algorithm;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
 import edu.jhu.Barbara.cs335.hw5.data.Action;
 import edu.jhu.Barbara.cs335.hw5.data.State;
-import edu.jhu.Barbara.cs335.hw5.data.WorldMap;
 import edu.jhu.Barbara.cs335.hw5.simulator.SimulationStep;
 import edu.jhu.Barbara.cs335.hw5.simulator.Simulator;
 import edu.jhu.Barbara.cs335.hw5.simulator.SimulatorEvent;
 import edu.jhu.Barbara.cs335.hw5.simulator.SimulatorListener;
 import edu.jhu.Barbara.cs335.hw5.util.DefaultValueHashMap;
 import edu.jhu.Barbara.cs335.hw5.util.Pair;
+
+import java.util.*;
 
 /**
  * A reinforcement agent which uses the Q-learning technique.
@@ -165,7 +159,6 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 		boolean criterion;
 		try {
 			criterion = (delta < convergenceTolerance * (1 - discountFactor) / discountFactor);
-			System.out.println(delta + "\t\t\t" + (convergenceTolerance * (1 - discountFactor) / discountFactor));
 		} catch(ArithmeticException e) {
 			if (delta == Double.NEGATIVE_INFINITY) {
 				return true;
