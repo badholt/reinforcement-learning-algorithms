@@ -47,12 +47,12 @@ public class Environment
 	 */
 	public Environment()
 	{
-		this.epsilon = 0.000000001;;
+		this.epsilon = 0.0001;
 		this.alpha = 0.5;
-		this.gamma = 1.0;
+		this.gamma = 0.9;
 		this.minExplorations = 1;
 		this.hardCrashing = false;
-		this.verboseSimulation = true;
+		this.verboseSimulation = false;
 		this.verboseSimulationDelay = 500;
 		this.progressReportDelay = 0;
 	}

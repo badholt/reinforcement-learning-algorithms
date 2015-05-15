@@ -34,11 +34,10 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 	private double learningFactor;
 	/** The convergence tolerance (epsilon). */
 	private double convergenceTolerance;
+	/** The current maximum difference shown in convergence of the Q-Learner on a fixed point: */
+	private double delta;
 	/** An optimistic reward estimate of unknown or scarcely-used State-Action pairs, encouraging exploration. */
-	private double rOptimistic = 0.2;
-
-	/** Tracks the maximum change in our perception of the environment during an iteration. */
-	double maximumChange = 0;
+	private double rOptimistic;
 
 	/** The record of how frequently each action has been explored from each state. */
 	private Map<Pair<State, Action>, Integer> visitEvents;
@@ -56,10 +55,87 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 		this.minimumExplorationCount = 1;
 		this.discountFactor = 0.99;
 		this.learningFactor = 0.5;
-		this.convergenceTolerance = 0.000000001;
+		this.convergenceTolerance = 0.01;
 		this.visitEvents = new DefaultValueHashMap<Pair<State, Action>, Integer>(0);
 		this.expectedReward = new DefaultValueHashMap<Pair<State, Action>, Double>(0.0);
 		this.simulator = null;
+		this.delta = 0.0;
+		this.rOptimistic = 0.2;
+	}
+
+	private Action aMaxFunction(State state) {
+		Action aMax = null;
+		Double rMax = Double.MIN_VALUE;
+		for (Action action : Action.LEGAL_ACTIONS) {
+			Double reward = explorationFunction(state, action);
+
+			/** The very first action will become the initial max, ensuring an action is always taken: */
+			if (reward >= rMax || rMax == Double.MIN_VALUE) {
+				rMax = reward;
+				aMax = action;
+			}
+		}
+		return aMax;
+	}
+
+	private Double explorationFunction(State sPrime, Action aPrime) {
+		/** The potential of a future state may be positive if it is a "gateway" to exploration. Just as an
+		 *  optimistic value was assigned for exploration in the action selection, an optimistic value is a
+		 *  potential incentive for exploration when calculating the max a' of Q(s', a'). */
+		Double reward;
+		Pair<State, Action> sa = new Pair<>(sPrime, aPrime);
+		int n = visitEvents.get(sa);
+		if (n < minimumExplorationCount) {
+			reward = rOptimistic;
+		} else {
+			reward = expectedReward.get(sa);
+		}
+
+		return reward;
+	}
+
+	private void QLearningFunction(SimulationStep step) {
+		/** Q(s, a): */
+		State s = step.getState();
+		Action a = step.getAction();
+		Pair<State, Action> Qsa = new Pair<State, Action>(s, a);
+		Double Q = expectedReward.get(Qsa);
+
+		/** Q(s', a'): */
+		State sPrime = step.getResultState();
+
+		/** Qmaxa'(s', a'): */
+		Action maxAPrime = aMaxFunction(sPrime);
+		Double maxQPrime = expectedReward.get(new Pair<>(sPrime, maxAPrime));
+
+		/** Update the exploration value, or number of visits: */
+		int n = visitEvents.get(Qsa) + 1;
+		visitEvents.put(Qsa, n);
+
+		/** The resulting reward, r: */
+		Double before = step.getBeforeScore();
+		Double after = step.getAfterScore();
+
+		/** The learning factor decreases as n increases. This function is crucial to eventual convergence, as the
+		 *  Q-learning agent is never completely static: */
+		Double learningFactorFunction = learningFactor / (double) (10*n);
+
+		/** Recalculate delta by determining the updated difference, or convergence progression. Some alpha learning
+		 *  functions will reach infinite values after multiple updates. In these cases we assume negligible difference
+		 *  between a value of Infinity and another value of Infinity, sending back a delta indicating convergence: */
+		double update = 0.0;
+		try {
+			update = Q + learningFactorFunction * ((after - before) + (discountFactor * maxQPrime) - Q);
+			double difference = Math.abs(update - Q);
+			if(difference > delta){
+				delta = difference;
+			}
+		} catch (ArithmeticException e) {
+			if (update == Double.POSITIVE_INFINITY) {
+				delta = Double.NEGATIVE_INFINITY;
+			}
+		}
+		expectedReward.put(Qsa, update);
 	}
 
 	@Override
@@ -78,11 +154,26 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 	{
 		// TODO: this function should call the simulator to perform a sample run
 		/** Calls simulator: */
-		this.simulator.simulate(this.getPolicy());
+		List<SimulationStep> history = this.simulator.simulate(this.getPolicy());
 
-		/** Maximum convergence termination condition (Textbook, Figure 17.4) */
-		Double delta = 0.0;
-		return (delta < convergenceTolerance * (1 - discountFactor) / discountFactor);
+		delta = Integer.MIN_VALUE;
+		for (int i = 0; i < history.size() - 1; i++) {
+			QLearningFunction(history.get(i));
+		}
+
+		/** Each iteration is checked for convergence, with special care to handle calculation of infinite numbers: */
+		boolean criterion;
+		try {
+			criterion = (delta < convergenceTolerance * (1 - discountFactor) / discountFactor);
+			System.out.println(delta + "\t\t\t" + (convergenceTolerance * (1 - discountFactor) / discountFactor));
+		} catch(ArithmeticException e) {
+			if (delta == Double.NEGATIVE_INFINITY) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		return criterion;
 	}
 
 	@Override
@@ -178,26 +269,7 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 			// TODO: this function should return an appropriate action based on
 			// an exploration policy and the current estimate of expected
 			// future reward.
-
-			Action amax = null;
-			Double rmax = Double.MIN_VALUE;
-			int n;
-			for (Action currentAction : Action.LEGAL_ACTIONS) {
-				Pair<State, Action> sa = new Pair<State, Action>(state, currentAction);
-				n = visitEvents.get(sa);
-				Double r = 0.0;
-				if (n < minimumExplorationCount) {
-					r = rOptimistic;
-				} else {
-					r = expectedReward.get(sa);
-				}
-
-				if (r >= rmax | rmax == Double.MIN_VALUE) {
-					rmax = r;
-					amax = currentAction;
-				}
-			}
-			return amax;
+			return aMaxFunction(state);
 		}
 	}
 
@@ -217,48 +289,7 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 		{
 			// TODO: this function will be called each time an action is taken;
 			// this is where updates to e.g. the Q-function should occur
-
-			/** Q(s, a): */
-			State s = event.getStep().getState();
-			Action a = event.getStep().getAction();
-			Pair<State, Action> Qsa = new Pair<State, Action>(s, a);
-			Double Q = expectedReward.get(Qsa);
-
-			/** Q(s', a'): */
-			State sPrime = event.getStep().getResultState();
-			Pair<State, Action> QsaPrime = new Pair<State, Action>(sPrime, a);
-
-			/** Qmaxa'(s', a'): */
-			Double maxQPrime = Double.MIN_VALUE;
-			Double rPrime = 0.0;
-			for (Action aPrime : Action.LEGAL_ACTIONS) {
-				/** The potential of a future state may be positive if it is a "gateway" to exploration. Just as an
-				 *  optimistic value was assigned for exploration in the action selection, an optimistic value is a
-				 *  potential incentive for exploration when calculating the max a' of Q(s', a'). */
-				int n = visitEvents.get(aPrime);
-				if (n < minimumExplorationCount) {
-					maxQPrime = rOptimistic;
-				} else {
-					rPrime = expectedReward.get(new Pair<>(sPrime, aPrime));
-				}
-
-				/** The very first action will become the initial max, ensuring an action is always taken: */
-				if (rPrime >= maxQPrime | maxQPrime == Double.MIN_VALUE) {
-					maxQPrime = rPrime;
-				}
-			}
-
-			/** Update the exploration value, or number of visits: */
-			int n = visitEvents.get(Qsa) + 1;
-			visitEvents.put(Qsa, n);
-
-			/** The resulting reward, r: */
-			Double before = event.getStep().getBeforeScore();
-			Double after = event.getStep().getAfterScore();
-
-
-			double update = Q + (after - before) +  learningFactor * n * (discountFactor * maxQPrime - Q);
-			expectedReward.put(Qsa, update);
+			QLearningFunction(event.getStep());
 		}
 	}
 }

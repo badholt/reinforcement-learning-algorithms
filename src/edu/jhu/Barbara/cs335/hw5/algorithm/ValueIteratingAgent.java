@@ -18,7 +18,6 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 	
 	/** A mapping between states in that world and their expected values. */
 	private Map<State, Double> expectedValues;
-	
 	/** The world in which this agent is operating. */
 	private WorldMap world;	
 	/** The discount factor for this agent. */
@@ -29,6 +28,12 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 	private RewardFunction rewardFunction;
 	/** The convergence tolerance (epsilon). */
 	private double convergenceTolerance;
+	/** The number of times the agent will explore a given state-action pair before giving up on it. */
+	private int minimumExplorationCount;
+	/** An optimistic utility estimate of unknown or scarcely-used State-Action pairs, encouraging exploration. */
+	private double uOptimistic;
+	/** The record of how frequently each action has been explored from each state. */
+	private Map<Pair<State, Action>, Integer> visitEvents;
 
 	/**
 	 * Creates a new value iterating agent.
@@ -38,10 +43,43 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 	{
 		this.expectedValues = new DefaultValueHashMap<>(0.0);
 		this.world = null;
+		this.minimumExplorationCount = 0;
 		this.discountFactor = 0.5;
 		this.transitionFunction = null;
 		this.rewardFunction = null;
 		this.convergenceTolerance = 0.000000001;
+		this.uOptimistic = 0.1;
+		this.visitEvents = new DefaultValueHashMap<Pair<State, Action>, Integer>(0);
+	}
+
+	/** Equation 21.5 in the textbook uses this simple exploration function: */
+	private Double explorationFunction(Double u, Integer n) {
+		if (n < minimumExplorationCount) {
+			return uOptimistic;
+		} else {
+			return u;
+		}
+	}
+
+	private Double utilityFunction(State state, Action currentAction) {
+		/** The transition model function returns a set of all possible actions following state s, along with
+		 *  their probability of occurring: */
+		Double currentUtility = 0.0;
+		for(Pair<State, Double> sPrime : transitionFunction.transition(state, currentAction)) {
+			/** The Utility, U, of each state, multiplied by its probability of occurring:  */
+			Double probabilitySPrime = sPrime.getSecond();
+			Double utilitySPrime = expectedValues.get(sPrime.getFirst());
+			int n;
+			Pair<State, Action> sa = new Pair<>(state, currentAction);
+			if (visitEvents.containsKey(sa)) {
+				n = visitEvents.get(sa);
+			} else {
+				n = 0;
+				visitEvents.put(sa, n);
+			}
+			currentUtility += explorationFunction(probabilitySPrime * utilitySPrime, n);
+		}
+		return currentUtility;
 	}
 
 	@Override
@@ -61,8 +99,9 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 		// TODO: implement value iteration; this is basically the inside of the
 		// while(!done) loop.
 
-		double delta = 0.0; //Maximum convergence
-		/** Traverses all possible states of the map: */
+		/** Traverses all possible states of the map, monitoring delta, or the progression to convergence as values are
+		 *  continuously updated: */
+		double delta = 0.0;
 		int width = world.getSize().getFirst();
 		int height = world.getSize().getSecond();
 		for(int i = 0; i < width; i++) {
@@ -82,31 +121,21 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 								Double reward = rewardFunction.reward(state);
 								/**Calculate the MAX UTILITY of each state: */
 								Double maxUtility = Double.MIN_VALUE;
-								Action maxAction = null;
 								for(Action actionPrime : Action.LEGAL_ACTIONS) {
-									/** The transition model function returns a set of all possible actions following state s, along with
-									 *  their probability of occurring: */
-									Double currentUtility = 0.0;
-									for(Pair<State, Double> sPrime : transitionFunction.transition(state, actionPrime)) {
-										/** The Utility, U, of each state, multiplied by its probability of occurring:  */
-										Double probabilitySPrime = sPrime.getSecond();
-										Double utilitySPrime = expectedValues.get(sPrime.getFirst());
-										currentUtility += (probabilitySPrime * utilitySPrime);
-									}
-
+									Double currentUtility = utilityFunction(state, actionPrime);
 									if (currentUtility >= maxUtility || maxUtility == Double.MIN_VALUE) {
 										maxUtility = currentUtility;
-										maxAction = actionPrime;
 									}
 								}
 								/** Calculate the new utility: */
-								Double after = reward + (discountFactor * maxUtility);
+								Double updatedUtility = reward + (discountFactor * maxUtility);
 								/** Recalculate delta by determining the difference, or convergence progression: */
-								double convergence = Math.abs(after - expectedValues.get(state));
-								if(convergence > delta){
-									delta = convergence;
+								double maxDifference = Math.abs(updatedUtility - expectedValues.get(state));
+								if(maxDifference > delta){
+									delta = maxDifference;
 								}
-								expectedValues.put(state, after);
+								/** Update the map values: */
+								expectedValues.put(state, updatedUtility);
 							}
 						}
 					}
@@ -200,22 +229,16 @@ public class ValueIteratingAgent implements ReinforcementLearningAgent
 			Double maxUtility = Double.MIN_VALUE;
 			Action maxAction = null;
 			for (Action currentAction : Action.LEGAL_ACTIONS) {
-				/** The transition model function returns a set of all possible actions following state s, along with
-				 *  their probability of occurring: */
-				Double currentUtility = 0.0;
-  				for(Pair<State, Double> sPrime : transitionFunction.transition(state, currentAction)) {
-					/** The Utility, U, of each state, multiplied by its probability of occurring:  */
-					Double probabilitySPrime = sPrime.getSecond();
-					Double utilitySPrime = expectedValues.get(sPrime.getFirst());
-					currentUtility += (probabilitySPrime * utilitySPrime);
-				}
+				Double currentUtility = utilityFunction(state, currentAction);
 
 				if (currentUtility >= maxUtility || maxUtility == Double.MIN_VALUE) {
 					maxUtility = currentUtility;
 					maxAction = currentAction;
 				}
 			}
-
+			/** Update the map values: */
+			Pair<State, Action> executedTransition = new Pair<>(state, maxAction);
+			visitEvents.put(executedTransition, visitEvents.get(executedTransition) + 1);
 			return maxAction;
 		}
 	}
