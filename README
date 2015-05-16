@@ -1,0 +1,104 @@
+________________________________________________________________________________
+
+                       HOMEWORK 5: Reinforcement Learning
+                  CS335 Artificial Intelligence | Barbara Holt
+________________________________________________________________________________
+
+1. Included Files (Scaffold Excluded)
+________________________________________________________________________________
+
+ + README
+
+ + bin
+
+ + data
+ ^-- Snake-track.txt
+     A custom map with a single, complex path.
+ ^-- Space-track.txt
+     A large custom map with mostly open space.
+ ^-- Straight-track.txt
+     A custom map with a single, straight path.
+
+ + output
+ ^-- SampleRun
+     A run-through of all basic data-collection functions.
+
+ + src
+ ^-- QLearningAgent.Java
+     This agent implements a Q-learning function, updating expected rewards for
+     state-action pairs as the agent moves across the map. An explorationFunction
+     method is included, which encourages the agent to visit relatively unexplored
+     state-actions. This is quantified by a new variable, rOptimistic, which is
+     the reward returned for relatively unvisited state-actions. Delta measures
+     the difference between subsequent Q-value updates, searching for eventual
+     convergence. An aMaxFunction method returns the action associated with the'
+     maximum reward for a given state. A QLearningFunction method updates a
+     HashMap of rewards according to the classic Q-learning function:
+     Q <- Q + alpha(n)(r + gamma*Qmax' - Q), where n = # of visit events
+
+     Appx. Runtimes (soft crash):
+         - Value-iterating Agent:
+             --------------------
+               Track | Time (s)
+             --------------------
+                 L   |  19.28
+             --------------------
+                 O   |  45.56
+             --------------------
+                 O2  |  47.824
+             --------------------
+                 R   |  63.639
+             --------------------
+
+ ^-- ValueIteratingAgent.java
+     This agent implements Reinforcement learning by iterating over the entire
+     HashMap of State-Action values, expectedValues, until convergence or
+     desired termination is reached. An explorationFunction method is included,
+     which encourages the agent to visit relatively unexplored state-actions.
+     This is quantified by a new variable, uOptimistic, which is the utility
+     returned for relatively unvisited state-actions. Delta measures the
+     difference between subsequent Q-value updates, searching for eventual
+     convergence. A utilityFunction method sums together the multiples of the
+     various possible outcomes of a state-action and their probabilities, in
+     order to calculate the expected utility of a state-action.
+
+     Appx. Runtimes (soft crash):
+        - Q-learning Agent:
+            --------------------
+              Track | Time (s)
+            --------------------
+                L   |  1.731
+            --------------------
+                O   |  19.414
+            --------------------
+                O2  |  6.954
+            --------------------
+                R   |  17.63
+            --------------------
+
+________________________________________________________________________________
+
+2. Reflections
+________________________________________________________________________________
+
+ The scaffold was of great help on this assignment, once I was able to determine
+ how much work had already been done.  At first, it was difficult to identify
+ what features, such as handling crashes, etc. had already been implemented.
+
+ The algorithms themselves were simple to write, when following instructions
+ from the book, and finally understanding how best to interface with the
+ scaffold.  Overall, I believe the program took 10 hours to write, with
+ significant portions of that time dedicated to investigating the scaffold
+ program, and cross-checking formulas with the textbook.
+
+ I liked having more time to focus on the learning portion of the assignment,
+ the agent and its progress, rather than the implementation of the code  The
+ visual simulation (verboseSimulation=t) was also helpful, informative, and
+ at times exciting to watch.  Given more time, I would've liked to make more
+ variables possible for experimentation, such as the amount of rewards in
+ non-terminating states.
+
+ Ultimately, I feel like this assignment was a perfect ending to our
+ Artificial Intelligence course, as it demonstrated how stochastic algorithms
+ in VI, and especially the learn-as-you-go Q-learning could provide an
+ artificial model of traditionally biological learning processes.

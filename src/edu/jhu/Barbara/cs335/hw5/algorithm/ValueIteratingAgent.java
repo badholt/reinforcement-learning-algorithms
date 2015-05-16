@@ -1,5 +1,4 @@
 package edu.jhu.Barbara.cs335.hw5.algorithm;
-
 import edu.jhu.Barbara.cs335.hw5.data.Action;
 import edu.jhu.Barbara.cs335.hw5.data.State;
 import edu.jhu.Barbara.cs335.hw5.data.Terrain;
@@ -9,6 +8,17 @@ import edu.jhu.Barbara.cs335.hw5.util.Pair;
 import java.util.Map;
 import java.util.Random;
 
+/** HOMEWORK 5: REINFORCEMENT LEARNING | CS335 AI | Barbara Holt
+ * This agent implements Reinforcement learning by iterating over the entire
+ * HashMap of State-Action values, expectedValues, until convergence or
+ * desired termination is reached. An explorationFunction method is included,
+ * which encourages the agent to visit relatively unexplored state-actions.
+ * This is quantified by a new variable, uOptimistic, which is the utility
+ * returned for relatively unvisited state-actions. Delta measures the
+ * difference between subsequent Q-value updates, searching for eventual
+ * convergence. A utilityFunction method sums together the multiples of the
+ * various possible outcomes of a state-action and their probabilities, in
+ * order to calculate the expected utility of a state-action. 	*/
 public class ValueIteratingAgent implements ReinforcementLearningAgent
 {
 	private static final long serialVersionUID = 1L;

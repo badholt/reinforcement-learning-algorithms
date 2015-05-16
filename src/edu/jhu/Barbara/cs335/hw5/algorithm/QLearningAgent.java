@@ -1,5 +1,4 @@
 package edu.jhu.Barbara.cs335.hw5.algorithm;
-
 import edu.jhu.Barbara.cs335.hw5.data.Action;
 import edu.jhu.Barbara.cs335.hw5.data.State;
 import edu.jhu.Barbara.cs335.hw5.simulator.SimulationStep;
@@ -8,7 +7,6 @@ import edu.jhu.Barbara.cs335.hw5.simulator.SimulatorEvent;
 import edu.jhu.Barbara.cs335.hw5.simulator.SimulatorListener;
 import edu.jhu.Barbara.cs335.hw5.util.DefaultValueHashMap;
 import edu.jhu.Barbara.cs335.hw5.util.Pair;
-
 import java.util.*;
 
 /**
@@ -16,6 +14,18 @@ import java.util.*;
  *
  * @author Zachary Palmer
  */
+
+/** HOMEWORK 5: REINFORCEMENT LEARNING | CS335 AI | Barbara Holt
+ * This agent implements a Q-learning function, updating expected rewards for
+ * state-action pairs as the agent moves across the map. An explorationFunction
+ * method is included, which encourages the agent to visit relatively unexplored
+ * state-actions. This is quantified by a new variable, rOptimistic, which is
+ * the reward returned for relatively unvisited state-actions. Delta measures
+ * the difference between subsequent Q-value updates, searching for eventual
+ * convergence. An aMaxFunction method returns the action associated with the'
+ * maximum reward for a given state. A QLearningFunction method updates a
+ * HashMap of rewards according to the classic Q-learning function:
+ * Q <- Q + alpha(n)(r + gamma*Qmax' - Q), where n = # of visit events	*/
 public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 {
 	private static final long serialVersionUID = 1L;
@@ -112,7 +122,7 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 
 		/** The learning factor decreases as n increases. This function is crucial to eventual convergence, as the
 		 *  Q-learning agent is never completely static: */
-		Double learningFactorFunction = learningFactor / (double) (10*n);
+		Double learningFactorFunction = learningFactor / (double) (n*n);
 
 		/** Recalculate delta by determining the updated difference, or convergence progression. Some alpha learning
 		 *  functions will reach infinite values after multiple updates. In these cases we assume negligible difference
@@ -159,6 +169,7 @@ public class QLearningAgent implements SimulationBasedReinforcementLearningAgent
 		boolean criterion;
 		try {
 			criterion = (delta < convergenceTolerance * (1 - discountFactor) / discountFactor);
+			//System.out.println(delta);
 		} catch(ArithmeticException e) {
 			if (delta == Double.NEGATIVE_INFINITY) {
 				return true;
